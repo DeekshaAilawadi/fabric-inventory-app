@@ -11,24 +11,30 @@ service_account_info = json.loads(st.secrets["gcp_service_account"])
 creds = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, scope)
 client = gspread.authorize(creds)
 
-# --- Google Sheets ---
+# --- Google Sheet References ---
 sheet = client.open("Fabric Inventory System")
 fabric_master = sheet.worksheet("Fabric_Master")
 inward_sheet = sheet.worksheet("Inward")
 outward_sheet = sheet.worksheet("Outward")
+
 fabrics = [cell for cell in fabric_master.col_values(1) if cell.lower() != "fabric name"]
 
-# --- UI ---
+# ✅ Load inventory data once to reuse
+inward_data = inward_sheet.get_all_records()
+outward_data = outward_sheet.get_all_records()
+
+# --- Streamlit UI Setup ---
 st.set_page_config(page_title="Fabric Inventory", layout="centered")
 st.title("🧵 Fabric Inventory System")
 
 tab1, tab2, tab3 = st.tabs(["➕ Add Inward", "➖ Add Outward", "📊 View Stock"])
 
-# --- Inward ---
+# --- ➕ Inward Entry Tab ---
 with tab1:
     st.subheader("📥 Add Inward Entry")
+
     fabric = st.selectbox("Select Fabric", fabrics)
-    qty = st.number_input("Quantity (in rolls)", min_value=1, step=1)
+    qty = st.number_input("Quantity (in rolls)", min_value=1, step=1, format="%d")
     party = st.text_input("Party Name")
 
     if st.button("Add Inward"):
@@ -36,43 +42,40 @@ with tab1:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             date = datetime.now().strftime("%Y-%m-%d")
             inward_sheet.append_row([timestamp, date, fabric, qty, party])
-            st.success(f"Inward entry added: {qty} rolls of {fabric} from {party}")
+            st.success(f"✅ Inward entry added: {qty} rolls of {fabric} from {party}")
         else:
-            st.error("Please fill all fields")
+            st.error("❌ Please fill in all fields.")
 
-# --- Outward ---
+# --- ➖ Outward Entry Tab ---
 with tab2:
     st.subheader("📤 Add Outward Entry")
 
-    fabric = st.selectbox("Select Fabric", fabrics, key="out_fabric")
+    fabric_out = st.selectbox("Select Fabric", fabrics, key="out_fabric")
     challan = st.text_input("Challan No.")
-    qty = st.number_input("Quantity (in rolls)", min_value=1, step=1, key="out_qty")
+    qty_out = st.number_input("Quantity (in rolls)", min_value=1, step=1, format="%d", key="out_qty")
 
-    # Check current stock for this fabric
-    inward_qty = sum(int(row["Qty"]) for row in inward_data if row["Fabric"] == fabric)
-    outward_qty = sum(int(row["Qty"]) for row in outward_data if row["Fabric"] == fabric)
+    # Calculate current stock
+    inward_qty = sum(int(row["Qty"]) for row in inward_data if row["Fabric"] == fabric_out)
+    outward_qty = sum(int(row["Qty"]) for row in outward_data if row["Fabric"] == fabric_out)
     current_stock = inward_qty - outward_qty
 
-    st.markdown(f"🧮 Current Stock: **{current_stock}** rolls")
+    st.markdown(f"📦 **Current Stock** for _{fabric_out}_: `{current_stock}` rolls")
 
     if st.button("Add Outward"):
         if not challan:
             st.error("❌ Please enter a challan number.")
-        elif qty > current_stock:
-            st.error(f"❌ Not enough stock! You have only {current_stock} rolls of {fabric}.")
+        elif qty_out > current_stock:
+            st.error(f"❌ Not enough stock! You only have {current_stock} rolls of {fabric_out}.")
         else:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             date = datetime.now().strftime("%Y-%m-%d")
-            outward_sheet.append_row([timestamp, date, fabric, qty, challan])
-            st.success(f"✅ Outward entry added: {qty} rolls of {fabric}, Challan No: {challan}")
+            outward_sheet.append_row([timestamp, date, fabric_out, qty_out, challan])
+            st.success(f"✅ Outward entry added: {qty_out} rolls of {fabric_out}, Challan No: {challan}")
 
-
-# --- Stock ---
+# --- 📊 Stock Summary Tab ---
 with tab3:
     st.subheader("📦 Current Stock Summary")
 
-    inward_data = inward_sheet.get_all_records()
-    outward_data = outward_sheet.get_all_records()
     stock_summary = {fabric: 0 for fabric in fabrics}
 
     for row in inward_data:
