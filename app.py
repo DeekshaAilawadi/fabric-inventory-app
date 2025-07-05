@@ -29,33 +29,35 @@ st.title("🧵 Fabric Inventory System")
 
 tab1, tab2, tab3, tab4 = st.tabs(["➕ Add Inward", "➖ Add Outward", "📊 View Stock", "📝 Edit Entry"])
 
-
 # --- ➕ Inward Entry Tab ---
 with tab1:
     st.subheader("📥 Add Inward Entry")
 
     fabric = st.selectbox("Select Fabric", fabrics)
-    qty = st.number_input("Quantity (in rolls)", min_value=1, step=1, format="%d")
+    qty_input = st.text_input("Quantity (in rolls)", value="", key="qty_inward", type="number")
+    qty = int(qty_input) if qty_input.isdigit() else 0
     party = st.text_input("Party Name")
 
     if st.button("Add Inward"):
-        if fabric and qty and party:
+        if fabric and qty > 0 and party:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             date = datetime.now().strftime("%Y-%m-%d")
             inward_sheet.append_row([timestamp, date, fabric, qty, party])
             st.success(f"✅ Inward entry added: {qty} rolls of {fabric} from {party}")
         else:
-            st.error("❌ Please fill in all fields.")
+            st.error("❌ Please fill in all fields with valid values.")
 
 # --- ➖ Outward Entry Tab ---
 with tab2:
     st.subheader("📤 Add Outward Entry")
 
     fabric_out = st.selectbox("Select Fabric", fabrics, key="out_fabric")
-    challan = st.text_input("Challan No.")
-    qty_out = st.number_input("Quantity (in rolls)", min_value=1, step=1, format="%d", key="out_qty")
+    challan_input = st.text_input("Challan No.", value="", key="challan_input", type="number")
+    qty_out_input = st.text_input("Quantity (in rolls)", value="", key="qty_outward", type="number")
 
-    # Calculate current stock
+    challan = int(challan_input) if challan_input.isdigit() else 0
+    qty_out = int(qty_out_input) if qty_out_input.isdigit() else 0
+
     inward_qty = sum(int(row["Qty"]) for row in inward_data if row["Fabric"] == fabric_out)
     outward_qty = sum(int(row["Qty"]) for row in outward_data if row["Fabric"] == fabric_out)
     current_stock = inward_qty - outward_qty
@@ -63,10 +65,12 @@ with tab2:
     st.markdown(f"📦 **Current Stock** for _{fabric_out}_: `{current_stock}` rolls")
 
     if st.button("Add Outward"):
-        if not challan:
-            st.error("❌ Please enter a challan number.")
+        if challan == 0:
+            st.error("❌ Please enter a valid challan number.")
         elif qty_out > current_stock:
             st.error(f"❌ Not enough stock! You only have {current_stock} rolls of {fabric_out}.")
+        elif qty_out == 0:
+            st.error("❌ Please enter a valid quantity.")
         else:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             date = datetime.now().strftime("%Y-%m-%d")
@@ -78,11 +82,9 @@ with tab3:
     st.subheader("📦 Current Stock Summary")
 
     stock_summary = {fabric: 0 for fabric in fabrics}
-
     for row in inward_data:
         if row["Fabric"] in stock_summary:
             stock_summary[row["Fabric"]] += int(row["Qty"])
-
     for row in outward_data:
         if row["Fabric"] in stock_summary:
             stock_summary[row["Fabric"]] -= int(row["Qty"])
@@ -90,6 +92,7 @@ with tab3:
     df = pd.DataFrame([{"Fabric": k, "Current Stock": v} for k, v in stock_summary.items()])
     st.dataframe(df, use_container_width=True)
 
+# --- 📝 Edit Entry Tab ---
 with tab4:
     st.subheader("📝 Edit Entry")
 
@@ -103,13 +106,9 @@ with tab4:
         df = pd.DataFrame(data)
         df_display = df.tail(5).reset_index(drop=True)
 
-        display_options = [
-            f"{entry_type} | {row['Fabric']} | {row['Qty']} rolls"
-            for _, row in df_display.iterrows()
-        ]
+        display_options = [f"{entry_type} | {row['Fabric']} | {row['Qty']} rolls" for _, row in df_display.iterrows()]
         selected_row = st.selectbox("Select an entry to edit", options=range(len(display_options)),
-                                    format_func=lambda x: display_options[x],
-                                    key="entry_selector")
+                                    format_func=lambda x: display_options[x], key="entry_selector")
 
         row_to_edit = df_display.iloc[selected_row]
         row_number = len(data) - 5 + selected_row + 2
@@ -117,25 +116,21 @@ with tab4:
         st.write("Original Entry:")
         st.write(row_to_edit)
 
-        fabric_edit = st.selectbox("Fabric", fabrics,
-                                   index=fabrics.index(row_to_edit["Fabric"]),
-                                   key="edit_fabric")
-        qty_edit = st.number_input("Quantity", min_value=1, step=1,
-                                   value=int(row_to_edit["Qty"]),
-                                   key="edit_qty")
+        fabric_edit = st.selectbox("Fabric", fabrics, index=fabrics.index(row_to_edit["Fabric"]), key="edit_fabric")
+        qty_edit = st.text_input("Quantity (rolls)", value=str(row_to_edit["Qty"]), key="edit_qty", type="number")
 
         if entry_type == "Inward":
-            party_value = row_to_edit.get("Party", "")
-            party_edit = st.text_input("Party Name", value=party_value, key="edit_party")
+            party_edit = st.text_input("Party Name", value=row_to_edit.get("Party", ""), key="edit_party")
         else:
-            challan_value = str(row_to_edit.get("Challan No.", ""))
-            challan_edit = st.text_input("Challan No.", value=challan_value, key="edit_challan")
+            challan_edit = st.text_input("Challan No.", value=str(row_to_edit.get("Challan No.", "")), key="edit_challan", type="number")
 
         if st.button("Update Entry", key="update_button"):
             try:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 date = datetime.now().strftime("%Y-%m-%d")
-                new_row = [timestamp, date, fabric_edit, qty_edit, party_edit if entry_type == "Inward" else challan_edit]
+                new_qty = int(qty_edit) if qty_edit.isdigit() else 0
+                new_value = party_edit if entry_type == "Inward" else challan_edit
+                new_row = [timestamp, date, fabric_edit, new_qty, new_value]
                 target_sheet.update(f"A{row_number}:E{row_number}", [new_row])
                 st.success("✅ Entry updated successfully!")
             except Exception as e:
