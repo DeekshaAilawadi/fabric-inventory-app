@@ -39,8 +39,9 @@ with tab1:
 
     if st.button("Add Inward"):
         if fabric and qty > 0 and party:
+            entry_date = st.date_input("Entry Date", value=datetime.today(), key="inward_date")
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            date = datetime.now().strftime("%Y-%m-%d")
+            date = entry_date.strftime("%Y-%m-%d")
             inward_sheet.append_row([timestamp, date, fabric, qty, party])
             st.success(f"✅ Inward entry added: {qty} rolls of {fabric} from {party}")
         else:
@@ -53,6 +54,8 @@ with tab2:
     fabric_out = st.selectbox("Select Fabric", fabrics, key="out_fabric")
     challan = st.text_input("Challan No.", key="challan_input")
     qty_out = st.number_input("Quantity (in rolls)", min_value=1, step=1, key="qty_outward")
+    entry_date_out = st.date_input("Entry Date", value=datetime.today(), key="outward_date")
+
 
     inward_qty = sum(int(row["Qty"]) for row in inward_data if row["Fabric"] == fabric_out)
     outward_qty = sum(int(row["Qty"]) for row in outward_data if row["Fabric"] == fabric_out)
@@ -69,7 +72,8 @@ with tab2:
             st.error("❌ Please enter a valid quantity.")
         else:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            date = datetime.now().strftime("%Y-%m-%d")
+            date = entry_date_out.strftime("%Y-%m-%d")
+
             outward_sheet.append_row([timestamp, date, fabric_out, qty_out, challan])
             st.success(f"✅ Outward entry added: {qty_out} rolls of {fabric_out}, Challan No: {challan}")
 
