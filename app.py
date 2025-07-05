@@ -34,8 +34,7 @@ with tab1:
     st.subheader("📥 Add Inward Entry")
 
     fabric = st.selectbox("Select Fabric", fabrics)
-    qty_input = st.text_input("Quantity (in rolls)", value="", key="qty_inward", type="number")
-    qty = int(qty_input) if qty_input.isdigit() else 0
+    qty = st.number_input("Quantity (in rolls)", min_value=1, step=1, key="qty_inward")
     party = st.text_input("Party Name")
 
     if st.button("Add Inward"):
@@ -52,11 +51,8 @@ with tab2:
     st.subheader("📤 Add Outward Entry")
 
     fabric_out = st.selectbox("Select Fabric", fabrics, key="out_fabric")
-    challan_input = st.text_input("Challan No.", value="", key="challan_input", type="number")
-    qty_out_input = st.text_input("Quantity (in rolls)", value="", key="qty_outward", type="number")
-
-    challan = int(challan_input) if challan_input.isdigit() else 0
-    qty_out = int(qty_out_input) if qty_out_input.isdigit() else 0
+    challan = st.text_input("Challan No.", key="challan_input")
+    qty_out = st.number_input("Quantity (in rolls)", min_value=1, step=1, key="qty_outward")
 
     inward_qty = sum(int(row["Qty"]) for row in inward_data if row["Fabric"] == fabric_out)
     outward_qty = sum(int(row["Qty"]) for row in outward_data if row["Fabric"] == fabric_out)
@@ -65,7 +61,7 @@ with tab2:
     st.markdown(f"📦 **Current Stock** for _{fabric_out}_: `{current_stock}` rolls")
 
     if st.button("Add Outward"):
-        if challan == 0:
+        if not challan.strip():
             st.error("❌ Please enter a valid challan number.")
         elif qty_out > current_stock:
             st.error(f"❌ Not enough stock! You only have {current_stock} rolls of {fabric_out}.")
@@ -117,20 +113,20 @@ with tab4:
         st.write(row_to_edit)
 
         fabric_edit = st.selectbox("Fabric", fabrics, index=fabrics.index(row_to_edit["Fabric"]), key="edit_fabric")
-        qty_edit = st.text_input("Quantity (rolls)", value=str(row_to_edit["Qty"]), key="edit_qty", type="number")
+        qty_edit = st.number_input("Quantity (rolls)", min_value=1, step=1, value=int(row_to_edit["Qty"]), key="edit_qty")
 
         if entry_type == "Inward":
             party_edit = st.text_input("Party Name", value=row_to_edit.get("Party", ""), key="edit_party")
+            final_value = party_edit
         else:
-            challan_edit = st.text_input("Challan No.", value=str(row_to_edit.get("Challan No.", "")), key="edit_challan", type="number")
+            challan_edit = st.text_input("Challan No.", value=str(row_to_edit.get("Challan No.", "")), key="edit_challan")
+            final_value = challan_edit
 
         if st.button("Update Entry", key="update_button"):
             try:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 date = datetime.now().strftime("%Y-%m-%d")
-                new_qty = int(qty_edit) if qty_edit.isdigit() else 0
-                new_value = party_edit if entry_type == "Inward" else challan_edit
-                new_row = [timestamp, date, fabric_edit, new_qty, new_value]
+                new_row = [timestamp, date, fabric_edit, qty_edit, final_value]
                 target_sheet.update(f"A{row_number}:E{row_number}", [new_row])
                 st.success("✅ Entry updated successfully!")
             except Exception as e:
