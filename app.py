@@ -27,7 +27,8 @@ outward_data = outward_sheet.get_all_records()
 st.set_page_config(page_title="Fabric Inventory", layout="centered")
 st.title("🧵 Fabric Inventory System")
 
-tab1, tab2, tab3 = st.tabs(["➕ Add Inward", "➖ Add Outward", "📊 View Stock"])
+tab1, tab2, tab3, tab4 = st.tabs(["➕ Add Inward", "➖ Add Outward", "📊 View Stock", "📝 Edit Entry"])
+
 
 # --- ➕ Inward Entry Tab ---
 with tab1:
@@ -88,3 +89,43 @@ with tab3:
 
     df = pd.DataFrame([{"Fabric": k, "Current Stock": v} for k, v in stock_summary.items()])
     st.dataframe(df, use_container_width=True)
+
+with tab4:
+    st.subheader("📝 Edit Entry")
+
+    entry_type = st.radio("Select Entry Type", ["Inward", "Outward"])
+    target_sheet = inward_sheet if entry_type == "Inward" else outward_sheet
+    data = inward_data if entry_type == "Inward" else outward_data
+
+    if len(data) == 0:
+        st.warning("No entries available to edit.")
+    else:
+        df = pd.DataFrame(data)
+        df_display = df.tail(5).reset_index()  # Last 5 entries
+        selected_idx = st.selectbox("Select an entry to edit", df_display["index"], format_func=lambda x: f"{entry_type} - {df_display.iloc[x]['Fabric']} ({df_display.iloc[x]['Qty']})")
+
+        row_to_edit = df_display.iloc[selected_idx]
+        row_number = selected_idx + 2  # Account for header row (starts at 2)
+
+        st.write("Original Entry:")
+        st.write(row_to_edit)
+
+        fabric_edit = st.selectbox("Fabric", fabrics, index=fabrics.index(row_to_edit["Fabric"]))
+        qty_edit = st.number_input("Quantity", min_value=1, step=1, value=int(row_to_edit["Qty"]))
+        
+        if entry_type == "Inward":
+            party_edit = st.text_input("Party Name", value=row_to_edit["Party"])
+        else:
+            challan_edit = st.text_input("Challan No.", value=str(row_to_edit["Challan No."]))
+
+        if st.button("Update Entry"):
+            try:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                date = datetime.now().strftime("%Y-%m-%d")
+
+                new_row = [timestamp, date, fabric_edit, qty_edit, party_edit if entry_type == "Inward" else challan_edit]
+                target_sheet.update(f"A{row_number}:E{row_number}", [new_row])
+                st.success("✅ Entry updated successfully!")
+            except Exception as e:
+                st.error(f"❌ Failed to update: {e}")
+
