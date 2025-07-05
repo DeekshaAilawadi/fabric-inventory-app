@@ -8,7 +8,7 @@ import pandas as pd
 
 # --- Google Sheets Setup ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("your-service-account-file.json .json", scope)
+creds = ServiceAccountCredentials.from_json_keyfile_name("your-service-account-file.json.json", scope)
 client = gspread.authorize(creds)
 
 # Connect to Google Sheet
