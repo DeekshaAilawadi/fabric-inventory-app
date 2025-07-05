@@ -93,7 +93,7 @@ with tab3:
 with tab4:
     st.subheader("📝 Edit Entry")
 
-    entry_type = st.radio("Select Entry Type", ["Inward", "Outward"])
+    entry_type = st.radio("Select Entry Type", ["Inward", "Outward"], key="edit_type")
     target_sheet = inward_sheet if entry_type == "Inward" else outward_sheet
     data = inward_data if entry_type == "Inward" else outward_data
 
@@ -107,26 +107,31 @@ with tab4:
             f"{entry_type} | {row['Fabric']} | {row['Qty']} rolls"
             for _, row in df_display.iterrows()
         ]
-        selected_row = st.selectbox("Select an entry to edit", options=range(len(display_options)), format_func=lambda x: display_options[x])
+        selected_row = st.selectbox("Select an entry to edit", options=range(len(display_options)),
+                                    format_func=lambda x: display_options[x],
+                                    key="entry_selector")
 
         row_to_edit = df_display.iloc[selected_row]
-        row_number = len(data) - 5 + selected_row + 2  # +2 accounts for header
+        row_number = len(data) - 5 + selected_row + 2
 
         st.write("Original Entry:")
         st.write(row_to_edit)
 
-        # --- Editable Inputs ---
-        fabric_edit = st.selectbox("Fabric", fabrics, index=fabrics.index(row_to_edit["Fabric"]))
-        qty_edit = st.number_input("Quantity", min_value=1, step=1, value=int(row_to_edit["Qty"]))
+        fabric_edit = st.selectbox("Fabric", fabrics,
+                                   index=fabrics.index(row_to_edit["Fabric"]),
+                                   key="edit_fabric")
+        qty_edit = st.number_input("Quantity", min_value=1, step=1,
+                                   value=int(row_to_edit["Qty"]),
+                                   key="edit_qty")
 
         if entry_type == "Inward":
             party_value = row_to_edit.get("Party", "")
-            party_edit = st.text_input("Party Name", value=party_value)
+            party_edit = st.text_input("Party Name", value=party_value, key="edit_party")
         else:
             challan_value = str(row_to_edit.get("Challan No.", ""))
-            challan_edit = st.text_input("Challan No.", value=challan_value)
+            challan_edit = st.text_input("Challan No.", value=challan_value, key="edit_challan")
 
-        if st.button("Update Entry"):
+        if st.button("Update Entry", key="update_button"):
             try:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 date = datetime.now().strftime("%Y-%m-%d")
