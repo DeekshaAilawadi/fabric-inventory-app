@@ -101,29 +101,30 @@ with tab4:
         st.warning("No entries available to edit.")
     else:
         df = pd.DataFrame(data)
-        df_display = df.tail(5).reset_index(drop=True)  # ✅ Drop old index
+        df_display = df.tail(5).reset_index(drop=True)
 
-        # Create labeled options for display
         display_options = [
             f"{entry_type} | {row['Fabric']} | {row['Qty']} rolls"
             for _, row in df_display.iterrows()
         ]
         selected_row = st.selectbox("Select an entry to edit", options=range(len(display_options)), format_func=lambda x: display_options[x])
-        
+
         row_to_edit = df_display.iloc[selected_row]
-        row_number = len(data) - 5 + selected_row + 2  # ✅ Real row number in sheet (2 is for header)
+        row_number = len(data) - 5 + selected_row + 2  # +2 accounts for header
 
         st.write("Original Entry:")
         st.write(row_to_edit)
 
-        # Input fields for editing
+        # --- Editable Inputs ---
         fabric_edit = st.selectbox("Fabric", fabrics, index=fabrics.index(row_to_edit["Fabric"]))
         qty_edit = st.number_input("Quantity", min_value=1, step=1, value=int(row_to_edit["Qty"]))
-        
+
         if entry_type == "Inward":
-            party_edit = st.text_input("Party Name", value=row_to_edit["Party"])
+            party_value = row_to_edit.get("Party", "")
+            party_edit = st.text_input("Party Name", value=party_value)
         else:
-            challan_edit = st.text_input("Challan No.", value=str(row_to_edit["Challan No."]))
+            challan_value = str(row_to_edit.get("Challan No.", ""))
+            challan_edit = st.text_input("Challan No.", value=challan_value)
 
         if st.button("Update Entry"):
             try:
