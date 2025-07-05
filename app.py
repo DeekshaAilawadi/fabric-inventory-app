@@ -101,15 +101,22 @@ with tab4:
         st.warning("No entries available to edit.")
     else:
         df = pd.DataFrame(data)
-        df_display = df.tail(5).reset_index()  # Last 5 entries
-        selected_idx = st.selectbox("Select an entry to edit", df_display["index"], format_func=lambda x: f"{entry_type} - {df_display.iloc[x]['Fabric']} ({df_display.iloc[x]['Qty']})")
+        df_display = df.tail(5).reset_index(drop=True)  # ✅ Drop old index
 
-        row_to_edit = df_display.iloc[selected_idx]
-        row_number = selected_idx + 2  # Account for header row (starts at 2)
+        # Create labeled options for display
+        display_options = [
+            f"{entry_type} | {row['Fabric']} | {row['Qty']} rolls"
+            for _, row in df_display.iterrows()
+        ]
+        selected_row = st.selectbox("Select an entry to edit", options=range(len(display_options)), format_func=lambda x: display_options[x])
+        
+        row_to_edit = df_display.iloc[selected_row]
+        row_number = len(data) - 5 + selected_row + 2  # ✅ Real row number in sheet (2 is for header)
 
         st.write("Original Entry:")
         st.write(row_to_edit)
 
+        # Input fields for editing
         fabric_edit = st.selectbox("Fabric", fabrics, index=fabrics.index(row_to_edit["Fabric"]))
         qty_edit = st.number_input("Quantity", min_value=1, step=1, value=int(row_to_edit["Qty"]))
         
@@ -122,10 +129,8 @@ with tab4:
             try:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 date = datetime.now().strftime("%Y-%m-%d")
-
                 new_row = [timestamp, date, fabric_edit, qty_edit, party_edit if entry_type == "Inward" else challan_edit]
                 target_sheet.update(f"A{row_number}:E{row_number}", [new_row])
                 st.success("✅ Entry updated successfully!")
             except Exception as e:
                 st.error(f"❌ Failed to update: {e}")
-
