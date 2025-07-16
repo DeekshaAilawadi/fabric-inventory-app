@@ -141,7 +141,8 @@ with tab4:
                                     format_func=lambda x: display_options[x], key="entry_selector")
 
         row_to_edit = df_display.iloc[selected_row]
-        row_number = len(data) - 5 + selected_row + 2
+        # row_number = len(data) - 5 + selected_row + 2
+        row_number = data.index(df_display.iloc[selected_row].to_dict()) + 2
 
         st.write("Original Entry:")
         st.write(row_to_edit)
