@@ -1,3 +1,5 @@
+# app.py
+
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -38,12 +40,10 @@ with tab1:
     party = st.text_input("Party Name")
     entry_date_in = st.date_input("Entry Date", value=datetime.today(), key="inward_date")
 
-
     if st.button("Add Inward"):
         if fabric and qty > 0 and party:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            
-            date = entry_date.strftime("%Y-%m-%d")
+            date = entry_date_in.strftime("%Y-%m-%d")
             inward_sheet.append_row([timestamp, date, fabric, qty, party])
             st.success(f"✅ Inward entry added: {qty} rolls of {fabric} from {party}")
         else:
@@ -57,7 +57,6 @@ with tab2:
     challan = st.text_input("Challan No.", key="challan_input")
     qty_out = st.number_input("Quantity (in rolls)", min_value=1, step=1, key="qty_outward")
     entry_date_out = st.date_input("Entry Date", value=datetime.today(), key="outward_date")
-
 
     inward_qty = sum(int(row["Qty"]) for row in inward_data if row["Fabric"] == fabric_out)
     outward_qty = sum(int(row["Qty"]) for row in outward_data if row["Fabric"] == fabric_out)
@@ -75,7 +74,6 @@ with tab2:
         else:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             date = entry_date_out.strftime("%Y-%m-%d")
-
             outward_sheet.append_row([timestamp, date, fabric_out, qty_out, challan])
             st.success(f"✅ Outward entry added: {qty_out} rolls of {fabric_out}, Challan No: {challan}")
 
