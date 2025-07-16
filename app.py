@@ -45,6 +45,21 @@ with tab1:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             date = entry_date_in.strftime("%Y-%m-%d")
             inward_sheet.append_row([timestamp, date, fabric, qty, party])
+            # Add new fabric to Fabric_Master if not present
+            if fabric not in fabrics:
+                fabric_master.append_row([fabric])
+                fabrics.append(fabric)
+            # Update Current Stock in Fabric_Master
+            try:
+                fabric_names = fabric_master.col_values(1)
+                if fabric in fabric_names:
+                    row_idx = fabric_names.index(fabric) + 1  # 1-based index
+                    inward_qty = sum(int(row["Qty"]) for row in inward_sheet.get_all_records() if row["Fabric"] == fabric)
+                    outward_qty = sum(int(row["Qty"]) for row in outward_sheet.get_all_records() if row["Fabric"] == fabric)
+                    current_stock = inward_qty - outward_qty
+                    fabric_master.update_cell(row_idx, 2, current_stock)
+            except Exception as e:
+                st.warning(f"Could not update Fabric_Master stock: {e}")
             st.success(f"✅ Inward entry added: {qty} rolls of {fabric} from {party}")
         else:
             st.error("❌ Please fill in all fields with valid values.")
@@ -75,6 +90,21 @@ with tab2:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             date = entry_date_out.strftime("%Y-%m-%d")
             outward_sheet.append_row([timestamp, date, fabric_out, qty_out, challan])
+            # Add new fabric to Fabric_Master if not present
+            if fabric_out not in fabrics:
+                fabric_master.append_row([fabric_out])
+                fabrics.append(fabric_out)
+            # Update Current Stock in Fabric_Master
+            try:
+                fabric_names = fabric_master.col_values(1)
+                if fabric_out in fabric_names:
+                    row_idx = fabric_names.index(fabric_out) + 1  # 1-based index
+                    inward_qty = sum(int(row["Qty"]) for row in inward_sheet.get_all_records() if row["Fabric"] == fabric_out)
+                    outward_qty = sum(int(row["Qty"]) for row in outward_sheet.get_all_records() if row["Fabric"] == fabric_out)
+                    current_stock = inward_qty - outward_qty
+                    fabric_master.update_cell(row_idx, 2, current_stock)
+            except Exception as e:
+                st.warning(f"Could not update Fabric_Master stock: {e}")
             st.success(f"✅ Outward entry added: {qty_out} rolls of {fabric_out}, Challan No: {challan}")
 
 # --- 📊 Stock Summary Tab ---
